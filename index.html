@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Ventas Avanzado</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.0/dist/sweetalert2.min.css">
+
+    <style>
+        /* --- CSS Personalizado --- */
+        /* Paleta de colores */
+        :root {
+            --color-negro: #212529; /* Fondo general y sidebar */
+            --color-turquesa: #40e0d0; /* Para botones, resaltados, texto */
+            --color-blanco: #f8f9fa; /* Texto principal, fondos de contenido */
+        }
+
+        body {
+            overflow-x: hidden; /* Evita el scroll horizontal */
+            background-color: var(--color-blanco);
+            color: var(--color-negro);
+        }
+
+        /* Contenedor principal de la aplicación */
+        #wrapper {
+            display: flex;
+            transition: all 0.3s ease-in-out; /* Transición suave al abrir/cerrar sidebar */
+        }
+
+        /* Sidebar (Menú Lateral) */
+        #sidebar-wrapper {
+            min-height: 100vh; /* Ocupa el 100% de la altura de la ventana */
+            margin-left: -15rem; /* Oculta el sidebar por defecto en móvil */
+            transition: margin 0.3s ease-out; /* Transición suave al mostrar/ocultar */
+            width: 15rem; /* Ancho del sidebar */
+            position: fixed; /* Fijo en pantalla */
+            z-index: 1000; /* Por encima de otros elementos */
+            background-color: var(--color-negro) !important; /* Forzar color negro */
+            border-right: 1px solid var(--color-turquesa); /* Borde turquesa */
+        }
+
+        /* Cuando el sidebar está "toggled" (abierto) */
+        #wrapper.toggled #sidebar-wrapper {
+            margin-left: 0; /* Muestra el sidebar */
+        }
+
+        .sidebar-heading {
+            padding: 0.875rem 1.25rem;
+            font-size: 1.2rem;
+            color: var(--color-blanco);
+            border-bottom: 1px solid var(--color-turquesa); /* Separador visual */
+        }
+
+        .list-group-item {
+            border: none; /* Eliminar bordes de los items de la lista */
+            padding: 1rem 1.25rem;
+            color: var(--color-turquesa); /* Texto turquesa */
+            transition: background-color 0.3s ease, color 0.3s ease; /* Transición para hover */
+        }
+
+        .list-group-item.active,
+        .list-group-item:hover {
+            background-color: var(--color-turquesa) !important; /* Fondo turquesa en hover/activo */
+            color: var(--color-negro) !important; /* Texto negro en hover/activo */
+            cursor: pointer;
+        }
+
+        /* Contenido Principal */
+        #page-content-wrapper {
+            min-width: 100vw; /* Ocupa todo el ancho de la ventana */
+            transition: margin 0.3s ease-out; /* Transición suave al abrir/cerrar sidebar */
+            margin-left: 0; /* Por defecto, ocupa todo el ancho */
+        }
+
+        #wrapper.toggled #page-content-wrapper {
+            margin-left: 15rem; /* Deja espacio para el sidebar cuando está abierto */
+            min-width: calc(100vw - 15rem); /* Ajusta el ancho para el sidebar */
+        }
+
+        /* Navbar superior */
+        .navbar {
+            background-color: var(--color-blanco) !important;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        /* Clases de utilidad para colores personalizados */
+        .text-turquoise {
+            color: var(--color-turquesa) !important;
+        }
+
+        .bg-turquoise {
+            background-color: var(--color-turquesa) !important;
+        }
+
+        .btn-turquoise {
+            background-color: var(--color-turquesa);
+            color: var(--color-negro);
+            border-color: var(--color-turquesa);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-turquoise:hover {
+            background-color: #33b8aa; /* Oscurece un poco el turquesa */
+            color: var(--color-negro);
+            border-color: #33b8aa;
+        }
+
+        .btn-outline-turquoise {
+            color: var(--color-turquesa);
+            border-color: var(--color-turquesa);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn-outline-turquoise:hover {
+            background-color: var(--color-turquesa);
+            color: var(--color-negro);
+        }
+
+        .border-bottom-turquoise {
+            border-bottom: 1px solid var(--color-turquesa) !important;
+        }
+
+        /* Efectos hover en botones */
+        .btn {
+            position: relative;
+            overflow: hidden;
+            z-index: 1; /* Asegura que el contenido del botón esté por encima del pseudo-elemento */
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transition: width 0.4s ease-out, height 0.4s ease-out, top 0.4s ease-out, left 0.4s ease-out;
+            transform: translate(-50%, -50%);
+            z-index: -1; /* Detrás del texto del botón */
+        }
+
+        .btn:hover::before {
+            width: 200%;
+            height: 200%;
+        }
+
+        /* Animación para el botón de alternar menú */
+        #menu-toggle {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        #wrapper.toggled #menu-toggle {
+            transform: rotate(180deg);
+        }
+
+        /* Estilos para el modal de login/registro */
+        .modal-content {
+            border: 1px solid var(--color-turquesa);
+        }
+
+        .form-control {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--color-turquesa);
+            color: var(--color-blanco);
+        }
+
+        .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: var(--color-turquesa);
+            box-shadow: 0 0 0 0.25rem rgba(64, 224, 208, 0.25); /* Sombra turquesa */
+            color: var(--color-blanco);
+        }
+
+        /* Placeholder color */
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-label {
+            color: var(--color-turquesa);
+        }
+
+        /* Estilos para el video de la cámara */
+        #camera-feed {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border: 1px solid var(--color-turquesa);
+            background-color: #333;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* Media Queries para responsividad */
+        @media (min-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: 0; /* El sidebar es visible por defecto en pantallas grandes */
+            }
+
+            #page-content-wrapper {
+                min-width: 0; /* Resetea el ancho mínimo */
+                width: 100%; /* Ocupa todo el ancho disponible */
+                margin-left: 15rem; /* Deja espacio para el sidebar */
+            }
+
+            #wrapper.toggled #sidebar-wrapper {
+                margin-left: -15rem; /* Oculta el sidebar cuando se hace toggle */
+            }
+
+            #wrapper.toggled #page-content-wrapper {
+                margin-left: 0; /* Ocupa todo el ancho cuando el sidebar está oculto */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <div class="bg-dark border-right" id="sidebar-wrapper">
+            <div class="sidebar-heading text-white-50 p-3">Sistema de Ventas</div>
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="dashboard">
+                    <i class="fas fa-home me-2"></i>Inicio
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="clients">
+                    <i class="fas fa-users me-2"></i>Clientes
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="products">
+                    <i class="fas fa-box me-2"></i>Productos
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="purchases">
+                    <i class="fas fa-shopping-cart me-2"></i>Compras
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="payments">
+                    <i class="fas fa-money-bill-wave me-2"></i>Abonos
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="inventory">
+                    <i class="fas fa-warehouse me-2"></i>Inventario
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="reports">
+                    <i class="fas fa-chart-bar me-2"></i>Reportes
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" data-section="backup">
+                    <i class="fas fa-save me-2"></i>Backup
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-turquoise" id="logout-btn">
+                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                </a>
+            </div>
+        </div>
+        <div id="page-content-wrapper">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+                <button class="btn btn-primary" id="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h3 class="ms-3 mb-0">Bienvenido al Sistema</h3>
+            </nav>
+
+            <div class="container-fluid py-4" id="main-content">
+                <h3>Dashboard de Inicio</h3>
+                <p>Selecciona una opción del menú lateral para comenzar.</p>
+            </div>
+        </div>
+        </div>
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-bottom-turquoise">
+                    <h5 class="modal-title" id="loginModalLabel">Iniciar Sesión</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Correo electrónico</label>
+                            <input type="email" class="form-control" id="loginEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-turquoise w-100 mb-3">Ingresar</button>
+                    </form>
+                    <p class="text-center text-muted">¿No tienes cuenta? <a href="#" class="text-turquoise" id="show-register-modal-btn">Regístrate aquí</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-bottom-turquoise">
+                    <h5 class="modal-title" id="registerModalLabel">Registrarse</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label for="registerName" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="registerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerEmail" class="form-label">Correo electrónico</label>
+                            <input type="email" class="form-control" id="registerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-turquoise w-100">Registrarse</button>
+                    </form>
+                    <p class="text-center text-muted mt-3">¿Ya tienes cuenta? <a href="#" class="text-turquoise" id="show-login-modal-btn">Inicia Sesión</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-bottom-turquoise">
+                    <h5 class="modal-title" id="cameraModalLabel">Tomar Foto del Producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <video id="camera-feed" autoplay playsinline></video>
+                    <canvas id="camera-canvas" style="display:none;"></canvas>
+                    <button class="btn btn-turquoise mt-3" id="take-photo-btn"><i class="fas fa-camera me-2"></i>Tomar Foto</button>
+                    <p class="text-muted mt-2" id="camera-status-msg"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.0/dist/sweetalert2.all.min.js"></script>
+    <script>
+        // --- JavaScript de la Aplicación ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Referencias a elementos del DOM ---
+            const wrapper = document.getElementById('wrapper'); // Contenedor principal para toggle de sidebar
+            const menuToggle = document.getElementById('menu-toggle'); // Botón para abrir/cerrar sidebar
+            const mainContent = document.getElementById('main-content'); // Área donde se carga el contenido dinámico
+            const sidebarLinks = document.querySelectorAll('.list-group-item[data-section]'); // Enlaces del menú lateral
+            const loginModal = new bootstrap.Modal(document.getElementById('loginModal')); // Modal de login
+            const registerModal = new bootstrap.Modal(document.getElementById('registerModal')); // Modal de registro
+            const loginForm = document.getElementById('login-form'); // Formulario de login
+            const registerForm = document.getElementById('register-form'); // Formulario de registro
+            const showRegisterModalBtn = document.getElementById('show-register-modal-btn'); // Botón para abrir modal de registro
+            const showLoginModalBtn = document.getElementById('show-login-modal-btn'); // Botón para abrir modal de login
+            const logoutBtn = document.getElementById('logout-btn'); // Botón de cerrar sesión
+
+            // Elementos para la cámara
+            const cameraModal = new bootstrap.Modal(document.getElementById('cameraModal'));
+            const cameraFeed = document.getElementById('camera-feed');
+            const cameraCanvas = document.getElementById('camera-canvas');
+            const takePhotoBtn = document.getElementById('take-photo-btn');
+            const cameraStatusMsg = document.getElementById('camera-status-msg');
+            let cameraStream = null; // Para almacenar el stream de la cámara
+
+            // --- Variables para la sesión de usuario y datos (simulando DB con LocalStorage) ---
+            let currentUser = null; // Almacena el usuario logueado actualmente
+            // Asegúrate de que siempre sean arrays al inicializar
+            let clients = [];
+            let products = [];
+            let purchases = [];
+
+            // --- Rutas de Sonidos (puedes añadir tus propios archivos .mp3 o .wav en una carpeta 'assets/audio') ---
+            const sounds = {
+                click: new Audio('https://www.soundjay.com/buttons/button-click-01.mp3'), // Ejemplo de URL pública para probar
+                confirm: new Audio('https://www.soundjay.com/misc/applause-1.mp3'),
+                alert: new Audio('https://www.soundjay.com/misc/failure-1.mp3'),
+                addToCart: new Audio('https://www.soundjay.com/misc/clink-2.mp3')
+            };
+
+            // --- Funciones de Utilidad ---
+
+            /**
+             * Reproduce un sonido corto.
+             * @param {string} soundName - Nombre del sonido (ej., 'click', 'confirm').
+             */
+            function playSound(soundName) {
+                if (sounds[soundName]) {
+                    sounds[soundName].play().catch(e => console.error("Error al reproducir sonido:", e));
+                }
+            }
+
+            /**
+             * Muestra una alerta personalizada usando SweetAlert2.
+             * @param {string} icon - Icono de la alerta ('success', 'error', 'warning', 'info', 'question').
+             * @param {string} title - Título de la alerta.
+             * @param {string} text - Texto del cuerpo de la alerta.
+             * @param {boolean} htmlContent - Si el texto contiene HTML.
+             * @param {string} confirmButtonText - Texto para el botón de confirmación.
+             * @param {string} cancelButtonText - Texto para el botón de cancelar.
+             * @returns {Promise} - Promesa que se resuelve cuando la alerta se cierra.
+             */
+            function showAlert(icon, title, text, htmlContent = false, confirmButtonText = 'OK', cancelButtonText = '') {
+                return Swal.fire({
+                    icon: icon,
+                    title: title,
+                    html: htmlContent ? text : null,
+                    text: htmlContent ? null : text,
+                    customClass: {
+                        popup: 'bg-dark text-white',
+                        title: 'text-turquoise',
+                        content: 'text-white'
+                    },
+                    buttonsStyling: false,
+                    confirmButtonClass: 'btn btn-turquoise',
+                    showCancelButton: cancelButtonText !== '',
+                    cancelButtonText: cancelButtonText,
+                    cancelButtonClass: 'btn btn-outline-turquoise ms-2',
+                    confirmButtonText: confirmButtonText
+                });
+            }
+
+
+            /**
+             * Guarda el estado de la sesión y los datos en Local Storage.
+             */
+            function saveData() {
+                localStorage.setItem('clients', JSON.stringify(clients));
+                localStorage.setItem('products', JSON.stringify(products));
+                localStorage.setItem('purchases', JSON.stringify(purchases));
+                if (currentUser) {
+                    localStorage.setItem('loggedInUser', JSON.stringify(currentUser));
+                } else {
+                    localStorage.removeItem('loggedInUser');
+                }
+                updateUIForAuth(); // Actualiza la UI después de guardar la sesión
+            }
+
+            /**
+             * Carga el estado de la sesión y los datos desde Local Storage.
+             */
+            function loadData() {
+                const storedUser = localStorage.getItem('loggedInUser');
+                if (storedUser) {
+                    currentUser = JSON.parse(storedUser);
+                } else {
+                    currentUser = null; // Asegurarse de que sea null si no hay usuario
+                }
+
+                // Asegúrate de que estas variables siempre sean arrays
+                clients = JSON.parse(localStorage.getItem('clients')) || [];
+                products = JSON.parse(localStorage.getItem('products')) || [];
+                purchases = JSON.parse(localStorage.getItem('purchases')) || [];
+
+                updateUIForAuth(); // Actualiza la UI al cargar la sesión
+            }
+
+            /**
+             * Actualiza la interfaz de usuario basándose en el estado de autenticación.
+             * Muestra/oculta el sidebar y los modales de login/registro.
+             */
+            function updateUIForAuth() {
+                if (currentUser) {
+                    wrapper.classList.remove('d-none'); // Muestra la aplicación completa
+                    loginModal.hide(); // Asegura que el modal de login esté oculto
+                    registerModal.hide(); // Asegura que el modal de registro esté oculto
+                    document.body.classList.remove('overflow-hidden'); // Habilita el scroll del body
+                    // Mostrar u ocultar el sidebar dependiendo del tamaño de pantalla
+                    if (window.innerWidth >= 768) {
+                        wrapper.classList.remove('toggled'); // Asegura que el sidebar esté abierto en desktop
+                    } else {
+                        wrapper.classList.add('toggled'); // Oculta el sidebar en móvil por defecto
+                    }
+                } else {
+                    wrapper.classList.add('d-none'); // Oculta la aplicación
+                    loginModal.show(); // Muestra el modal de login
+                    document.body.classList.add('overflow-hidden'); // Deshabilita el scroll del body
+                }
+            }
+
+            /**
+             * Genera una ID única (para clientes, productos, compras).
+             * En una app real, usarías UUIDs o IDs generadas por el backend.
+             */
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            // --- Funciones para Cargar Contenido Dinámico en mainContent ---
+            function loadDashboard() {
+                mainContent.innerHTML = `
+                    <h3>Bienvenido, ${currentUser ? currentUser.name : 'Invitado'}!</h3>
+                    <p>Este es el panel de control de tu sistema de ventas.</p>
+                    <div class="row mt-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise"><i class="fas fa-users me-2"></i>Total Clientes</h5>
+                                    <p class="card-text fs-3">${clients.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise"><i class="fas fa-box me-2"></i>Total Productos</h5>
+                                    <p class="card-text fs-3">${products.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise"><i class="fas fa-shopping-cart me-2"></i>Total Compras</h5>
+                                    <p class="card-text fs-3">${purchases.length}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function loadClientsSection() {
+                mainContent.innerHTML = `
+                    <h3>Gestión de Clientes</h3>
+                    <p>Aquí puedes agregar, ver y editar la información de tus clientes.</p>
+                    <button class="btn btn-turquoise mb-3" id="add-client-btn"><i class="fas fa-plus me-2"></i>Agregar Nuevo Cliente</button>
+
+                    <div id="client-form-container" class="card bg-dark text-white p-3 mb-4 d-none">
+                        <h5 class="card-title text-turquoise" id="client-form-title">Agregar Nuevo Cliente</h5>
+                        <form id="client-form">
+                            <input type="hidden" id="client-id">
+                            <div class="mb-3">
+                                <label for="clientName" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="clientName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="clientPhone" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="clientPhone" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="clientAddress" class="form-label">Dirección</label>
+                                <input type="text" class="form-control" id="clientAddress" required>
+                            </div>
+                            <button type="submit" class="btn btn-turquoise me-2"><i class="fas fa-save me-2"></i>Guardar Cliente</button>
+                            <button type="button" class="btn btn-outline-turquoise" id="cancel-client-btn"><i class="fas fa-times me-2"></i>Cancelar</button>
+                        </form>
+                    </div>
+
+                    <div id="client-list-container">
+                        <h5 class="text-turquoise">Listado de Clientes</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover text-white">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Nombre</th>
+                                        <th scope="col">Teléfono</th>
+                                        <th scope="col">Dirección</th>
+                                        <th scope="col">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clients-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="client-detail-container" class="card bg-dark text-white p-3 mt-4 d-none">
+                        <h5 class="card-title text-turquoise" id="client-detail-name">Detalle de Cliente</h5>
+                        <p><strong>Teléfono:</strong> <span id="detail-phone"></span></p>
+                        <p><strong>Dirección:</strong> <span id="detail-address"></span></p>
+                        <h6 class="text-turquoise mt-3">Historial de Compras</h6>
+                        <ul id="client-purchases-history" class="list-group list-group-flush bg-dark border-turquoise rounded">
+                            </ul>
+                        <p class="mt-3"><strong>Total Comprado Acumulado:</strong> $<span id="detail-total-purchased">0.00</span></p>
+                        <button class="btn btn-outline-turquoise mt-3" id="back-to-clients-list-btn"><i class="fas fa-arrow-left me-2"></i>Volver a la lista</button>
+                    </div>
+                `;
+                document.getElementById('add-client-btn').addEventListener('click', showAddClientForm);
+                document.getElementById('cancel-client-btn').addEventListener('click', hideClientForm);
+                document.getElementById('client-form').addEventListener('submit', handleClientFormSubmit);
+                document.getElementById('back-to-clients-list-btn').addEventListener('click', showClientList);
+                renderClients();
+            }
+
+            function showAddClientForm() {
+                document.getElementById('client-form-container').classList.remove('d-none');
+                document.getElementById('client-list-container').classList.add('d-none');
+                document.getElementById('client-detail-container').classList.add('d-none');
+                document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
+                document.getElementById('client-id').value = '';
+                document.getElementById('clientName').value = '';
+                document.getElementById('clientPhone').value = '';
+                document.getElementById('clientAddress').value = '';
+                playSound('click');
+            }
+
+            function hideClientForm() {
+                document.getElementById('client-form-container').classList.add('d-none');
+                document.getElementById('client-list-container').classList.remove('d-none');
+                document.getElementById('client-detail-container').classList.add('d-none');
+                renderClients(); // Vuelve a renderizar la lista
+                playSound('click');
+            }
+
+            function showClientList() {
+                document.getElementById('client-form-container').classList.add('d-none');
+                document.getElementById('client-list-container').classList.remove('d-none');
+                document.getElementById('client-detail-container').classList.add('d-none');
+                renderClients(); // Vuelve a renderizar la lista
+                playSound('click');
+            }
+
+            function renderClients() {
+                const clientsTableBody = document.getElementById('clients-table-body');
+                clientsTableBody.innerHTML = ''; // Limpiar tabla
+
+                // Asegúrate de que clients sea un array antes de intentar acceder a .length
+                if (!Array.isArray(clients) || clients.length === 0) {
+                    clientsTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay clientes registrados.</td></tr>';
+                    return;
+                }
+
+                clients.forEach(client => {
+                    const row = clientsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${client.name}</td>
+                        <td>${client.phone}</td>
+                        <td>${client.address}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info me-1 view-client" data-id="${client.id}" title="Ver Detalle"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-warning me-1 edit-client" data-id="${client.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-client" data-id="${client.id}" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                });
+
+                document.querySelectorAll('.view-client').forEach(btn => btn.addEventListener('click', (e) => viewClientDetail(e.currentTarget.dataset.id)));
+                document.querySelectorAll('.edit-client').forEach(btn => btn.addEventListener('click', (e) => editClient(e.currentTarget.dataset.id)));
+                document.querySelectorAll('.delete-client').forEach(btn => btn.addEventListener('click', (e) => deleteClient(e.currentTarget.dataset.id)));
+            }
+
+            function handleClientFormSubmit(event) {
+                event.preventDefault();
+                const id = document.getElementById('client-id').value;
+                const name = document.getElementById('clientName').value.trim();
+                const phone = document.getElementById('clientPhone').value.trim();
+                const address = document.getElementById('clientAddress').value.trim();
+
+                if (!name || !phone || !address) {
+                    showAlert('error', 'Campos Incompletos', 'Por favor, rellena todos los campos del cliente.');
+                    return;
+                }
+
+                if (id) {
+                    // Editar cliente existente
+                    const clientIndex = clients.findIndex(c => c.id === id);
+                    if (clientIndex !== -1) {
+                        clients[clientIndex] = { ...clients[clientIndex], name, phone, address };
+                        showAlert('success', 'Cliente Actualizado', 'La información del cliente ha sido actualizada.');
+                    }
+                } else {
+                    // Agregar nuevo cliente
+                    const newClient = { id: generateId(), name, phone, address };
+                    clients.push(newClient);
+                    showAlert('success', 'Cliente Agregado', `"${name}" ha sido añadido a la lista de clientes.`);
+                }
+                saveData();
+                hideClientForm(); // Oculta el formulario y muestra la lista
+                playSound('confirm');
+            }
+
+            function editClient(id) {
+                const client = clients.find(c => c.id === id);
+                if (client) {
+                    document.getElementById('client-form-container').classList.remove('d-none');
+                    document.getElementById('client-list-container').classList.add('d-none');
+                    document.getElementById('client-detail-container').classList.add('d-none');
+                    document.getElementById('client-form-title').textContent = 'Editar Cliente';
+                    document.getElementById('client-id').value = client.id;
+                    document.getElementById('clientName').value = client.name;
+                    document.getElementById('clientPhone').value = client.phone;
+                    document.getElementById('clientAddress').value = client.address;
+                    playSound('click');
+                }
+            }
+
+            async function deleteClient(id) {
+                const result = await showAlert('warning', 'Confirmar Eliminación', '¿Estás seguro de que quieres eliminar este cliente? Esta acción no se puede deshacer.', true, 'Sí, eliminar', 'Cancelar');
+                if (result.isConfirmed) {
+                    clients = clients.filter(c => c.id !== id);
+                    // También elimina sus compras asociadas
+                    purchases = purchases.filter(p => p.clientId !== id);
+                    saveData();
+                    showAlert('success', 'Cliente Eliminado', 'El cliente ha sido eliminado correctamente.');
+                    renderClients();
+                    playSound('alert');
+                }
+            }
+
+            function viewClientDetail(id) {
+                const client = clients.find(c => c.id === id);
+                if (!client) {
+                    showAlert('error', 'Error', 'Cliente no encontrado.');
+                    return;
+                }
+
+                document.getElementById('client-list-container').classList.add('d-none');
+                document.getElementById('client-form-container').classList.add('d-none');
+                document.getElementById('client-detail-container').classList.remove('d-none');
+
+                document.getElementById('client-detail-name').textContent = `Detalle de Cliente: ${client.name}`;
+                document.getElementById('detail-phone').textContent = client.phone;
+                document.getElementById('detail-address').textContent = client.address;
+
+                // Asegúrate de que `purchases` sea un array
+                const clientPurchases = Array.isArray(purchases) ? purchases.filter(p => p.clientId === id) : [];
+                const clientPurchasesHistory = document.getElementById('client-purchases-history');
+                clientPurchasesHistory.innerHTML = '';
+                let totalPurchased = 0;
+
+                if (clientPurchases.length === 0) {
+                    clientPurchasesHistory.innerHTML = '<li class="list-group-item bg-dark text-muted">Este cliente no tiene compras registradas.</li>';
+                } else {
+                    clientPurchases.forEach(purchase => {
+                        const productsList = purchase.products.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item bg-dark text-white border-bottom border-secondary';
+                        li.innerHTML = `
+                            <strong>Fecha:</strong> ${new Date(purchase.date).toLocaleDateString()} ${new Date(purchase.date).toLocaleTimeString()} <br>
+                            <strong>Productos:</strong> ${productsList} <br>
+                            <strong>Método de Pago:</strong> ${purchase.paymentMethod} <br>
+                            <strong>Total:</strong> $${purchase.total.toFixed(2)}
+                        `;
+                        clientPurchasesHistory.appendChild(li);
+                        totalPurchased += purchase.total;
+                    });
+                }
+                document.getElementById('detail-total-purchased').textContent = totalPurchased.toFixed(2);
+                playSound('click');
+            }
+
+
+            function loadProductsSection() {
+                mainContent.innerHTML = `
+                    <h3>Gestión de Productos</h3>
+                    <p>Administra tu inventario de productos.</p>
+                    <button class="btn btn-turquoise mb-3" id="add-product-btn"><i class="fas fa-plus me-2"></i>Agregar Nuevo Producto</button>
+
+                    <div id="product-form-container" class="card bg-dark text-white p-3 mb-4 d-none">
+                        <h5 class="card-title text-turquoise" id="product-form-title">Agregar Nuevo Producto</h5>
+                        <form id="product-form">
+                            <input type="hidden" id="product-id">
+                            <div class="mb-3">
+                                <label for="productName" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="productName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productDescription" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="productDescription" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productPrice" class="form-label">Precio</label>
+                                <input type="number" class="form-control" id="productPrice" min="0.01" step="0.01" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productInventory" class="form-label">Inventario</label>
+                                <input type="number" class="form-control" id="productInventory" min="0" step="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productCategory" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="productCategory" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="productImage" class="form-label">Imagen del Producto</label>
+                                <div class="input-group">
+                                    <input type="file" class="form-control" id="productImage" accept="image/*">
+                                    <button class="btn btn-outline-turquoise" type="button" id="open-camera-btn" title="Tomar foto con cámara"><i class="fas fa-camera"></i></button>
+                                </div>
+                                <img id="product-image-preview" src="" alt="Previsualización de Imagen" class="img-thumbnail mt-2 d-none" style="max-width: 150px; max-height: 150px;">
+                            </div>
+                            <button type="submit" class="btn btn-turquoise me-2"><i class="fas fa-save me-2"></i>Guardar Producto</button>
+                            <button type="button" class="btn btn-outline-turquoise" id="cancel-product-btn"><i class="fas fa-times me-2"></i>Cancelar</button>
+                        </form>
+                    </div>
+
+                    <div id="product-list-container">
+                        <h5 class="text-turquoise">Listado de Productos</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover text-white">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Imagen</th>
+                                        <th scope="col">Nombre</th>
+                                        <th scope="col">Categoría</th>
+                                        <th scope="col">Precio</th>
+                                        <th scope="col">Inventario</th>
+                                        <th scope="col">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="products-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('add-product-btn').addEventListener('click', showAddProductForm);
+                document.getElementById('cancel-product-btn').addEventListener('click', hideProductForm);
+                document.getElementById('product-form').addEventListener('submit', handleProductFormSubmit);
+                document.getElementById('productImage').addEventListener('change', previewImageFromFile); // Cambiado para diferenciar
+                document.getElementById('open-camera-btn').addEventListener('click', openCameraModal); // Nuevo botón
+                renderProducts();
+            }
+
+            function showAddProductForm() {
+                document.getElementById('product-form-container').classList.remove('d-none');
+                document.getElementById('product-list-container').classList.add('d-none');
+                document.getElementById('product-form-title').textContent = 'Agregar Nuevo Producto';
+                document.getElementById('product-id').value = '';
+                document.getElementById('productName').value = '';
+                document.getElementById('productDescription').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productInventory').value = '';
+                document.getElementById('productCategory').value = '';
+                document.getElementById('productImage').value = ''; // Limpiar input file
+                document.getElementById('product-image-preview').classList.add('d-none'); // Ocultar previsualización
+                document.getElementById('product-image-preview').src = '';
+                playSound('click');
+            }
+
+            function hideProductForm() {
+                document.getElementById('product-form-container').classList.add('d-none');
+                document.getElementById('product-list-container').classList.remove('d-none');
+                renderProducts(); // Vuelve a renderizar la lista
+                playSound('click');
+            }
+
+            function previewImageFromFile(event) {
+                const preview = document.getElementById('product-image-preview');
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.classList.add('d-none');
+                    preview.src = '';
+                }
+            }
+
+            // --- Lógica para la Cámara ---
+            async function openCameraModal() {
+                cameraStatusMsg.textContent = "Solicitando acceso a la cámara...";
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    cameraFeed.srcObject = cameraStream;
+                    cameraModal.show();
+                    cameraStatusMsg.textContent = "Cámara lista.";
+                    takePhotoBtn.onclick = takePhoto; // Asignar el evento al botón
+                    playSound('click');
+                } catch (err) {
+                    console.error("Error al acceder a la cámara:", err);
+                    cameraStatusMsg.textContent = "Error: No se pudo acceder a la cámara. Asegúrate de dar permisos.";
+                    showAlert('error', 'Acceso a Cámara Denegado', 'No se pudo acceder a la cámara. Por favor, verifica los permisos de tu navegador.');
+                }
+            }
+
+            function takePhoto() {
+                if (!cameraStream) {
+                    showAlert('error', 'Cámara no activa', 'No hay un flujo de cámara activo para tomar la foto.');
+                    return;
+                }
+                const context = cameraCanvas.getContext('2d');
+                cameraCanvas.width = cameraFeed.videoWidth;
+                cameraCanvas.height = cameraFeed.videoHeight;
+                context.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                const imageDataUrl = cameraCanvas.toDataURL('image/png'); // O 'image/jpeg'
+
+                // Asignar la imagen tomada al preview del formulario de producto
+                document.getElementById('product-image-preview').src = imageDataUrl;
+                document.getElementById('product-image-preview').classList.remove('d-none');
+
+                // Detener el stream de la cámara y cerrar el modal
+                stopCameraStream();
+                cameraModal.hide();
+                playSound('confirm');
+            }
+
+            function stopCameraStream() {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+            }
+
+            // Asegurarse de detener la cámara al cerrar el modal manualmente
+            document.getElementById('cameraModal').addEventListener('hide.bs.modal', stopCameraStream);
+
+
+            function renderProducts() {
+                const productsTableBody = document.getElementById('products-table-body');
+                productsTableBody.innerHTML = ''; // Limpiar tabla
+
+                if (!Array.isArray(products) || products.length === 0) {
+                    productsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay productos registrados.</td></tr>';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const row = productsTableBody.insertRow();
+                    row.innerHTML = `
+                        <td><img src="${product.imageUrl || 'https://via.placeholder.com/50?text=No+Img'}" alt="Producto" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;"></td>
+                        <td>${product.name}</td>
+                        <td>${product.category}</td>
+                        <td>$${product.price.toFixed(2)}</td>
+                        <td>${product.inventory}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-warning me-1 edit-product" data-id="${product.id}" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-product" data-id="${product.id}" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                });
+
+                document.querySelectorAll('.edit-product').forEach(btn => btn.addEventListener('click', (e) => editProduct(e.currentTarget.dataset.id)));
+                document.querySelectorAll('.delete-product').forEach(btn => btn.addEventListener('click', (e) => deleteProduct(e.currentTarget.dataset.id)));
+            }
+
+            function handleProductFormSubmit(event) {
+                event.preventDefault();
+                const id = document.getElementById('product-id').value;
+                const name = document.getElementById('productName').value.trim();
+                const description = document.getElementById('productDescription').value.trim();
+                const price = parseFloat(document.getElementById('productPrice').value);
+                const inventory = parseInt(document.getElementById('productInventory').value);
+                const category = document.getElementById('productCategory').value.trim();
+                const imageFile = document.getElementById('productImage').files[0];
+                let imageUrl = document.getElementById('product-image-preview').src; // Obtener la URL del preview (podría venir de archivo o cámara)
+
+                if (!name || isNaN(price) || price <= 0 || isNaN(inventory) || inventory < 0 || !category) {
+                    showAlert('error', 'Campos Inválidos', 'Por favor, rellena todos los campos correctamente. Precio e Inventario deben ser números válidos.');
+                    return;
+                }
+
+                // Si hay un archivo de imagen seleccionado, priorizarlo
+                if (imageFile) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imageUrl = e.target.result;
+                        saveProduct(id, name, description, price, inventory, category, imageUrl);
+                    };
+                    reader.readAsDataURL(imageFile);
+                } else if (imageUrl && imageUrl.startsWith('data:image')) {
+                    // Si no hay archivo pero sí hay una imagen en el preview (de la cámara)
+                    saveProduct(id, name, description, price, inventory, category, imageUrl);
+                } else {
+                    // Si no hay archivo ni imagen de cámara
+                    saveProduct(id, name, description, price, inventory, category, ''); // Guardar sin imagen
+                }
+            }
+
+            function saveProduct(id, name, description, price, inventory, category, imageUrl) {
+                if (id) {
+                    // Editar producto existente
+                    const productIndex = products.findIndex(p => p.id === id);
+                    if (productIndex !== -1) {
+                        products[productIndex] = { ...products[productIndex], name, description, price, inventory, category, imageUrl };
+                        showAlert('success', 'Producto Actualizado', 'La información del producto ha sido actualizada.');
+                    }
+                } else {
+                    // Agregar nuevo producto
+                    const newProduct = { id: generateId(), name, description, price, inventory, category, imageUrl };
+                    products.push(newProduct);
+                    showAlert('success', 'Producto Agregado', `"${name}" ha sido añadido al inventario.`);
+                }
+                saveData();
+                hideProductForm(); // Oculta el formulario y muestra la lista
+                playSound('confirm');
+            }
+
+            function editProduct(id) {
+                const product = products.find(p => p.id === id);
+                if (product) {
+                    document.getElementById('product-form-container').classList.remove('d-none');
+                    document.getElementById('product-list-container').classList.add('d-none');
+                    document.getElementById('product-form-title').textContent = 'Editar Producto';
+                    document.getElementById('product-id').value = product.id;
+                    document.getElementById('productName').value = product.name;
+                    document.getElementById('productDescription').value = product.description;
+                    document.getElementById('productPrice').value = product.price;
+                    document.getElementById('productInventory').value = product.inventory;
+                    document.getElementById('productCategory').value = product.category;
+
+                    const preview = document.getElementById('product-image-preview');
+                    if (product.imageUrl) {
+                        preview.src = product.imageUrl;
+                        preview.classList.remove('d-none');
+                    } else {
+                        preview.classList.add('d-none');
+                        preview.src = '';
+                    }
+                    document.getElementById('productImage').value = ''; // Limpiar el input file por si el usuario no quiere cambiar la imagen
+                    playSound('click');
+                }
+            }
+
+            async function deleteProduct(id) {
+                const result = await showAlert('warning', 'Confirmar Eliminación', '¿Estás seguro de que quieres eliminar este producto?', true, 'Sí, eliminar', 'Cancelar');
+                if (result.isConfirmed) {
+                    products = products.filter(p => p.id !== id);
+                    saveData();
+                    showAlert('success', 'Producto Eliminado', 'El producto ha sido eliminado correctamente.');
+                    renderProducts();
+                    playSound('alert');
+                }
+            }
+
+            let shoppingCart = []; // Carrito de compras actual
+
+            function loadPurchasesSection() {
+                mainContent.innerHTML = `
+                    <h3>Registro de Compras</h3>
+                    <p>Realiza nuevas ventas y gestiona tus transacciones.</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-dark text-white p-3 mb-4">
+                                <h5 class="card-title text-turquoise">Seleccionar Cliente</h5>
+                                <div class="mb-3">
+                                    <label for="purchaseClientSelect" class="form-label">Cliente</label>
+                                    <select class="form-select bg-dark text-white border-turquoise" id="purchaseClientSelect" required>
+                                        <option value="">Selecciona un cliente</option>
+                                        ${Array.isArray(clients) ? clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('') : ''}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="card bg-dark text-white p-3 mb-4">
+                                <h5 class="card-title text-turquoise">Productos Disponibles</h5>
+                                <input type="text" class="form-control mb-3" id="productSearch" placeholder="Buscar producto...">
+                                <div class="list-group" id="available-products-list" style="max-height: 400px; overflow-y: auto;">
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-dark text-white p-3 mb-4">
+                                <h5 class="card-title text-turquoise">Carrito de Compras</h5>
+                                <ul id="shopping-cart-list" class="list-group list-group-flush bg-dark border-turquoise rounded mb-3">
+                                    </ul>
+                                <h4 class="text-turquoise">Total: $<span id="cart-total">0.00</span></h4>
+                                <div class="mb-3">
+                                    <label for="paymentMethod" class="form-label">Método de Pago</label>
+                                    <select class="form-select bg-dark text-white border-turquoise" id="paymentMethod" required>
+                                        <option value="contado">Contado</option>
+                                        <option value="abonos">Abonos</option>
+                                    </select>
+                                </div>
+                                <div id="abonos-options" class="mb-3 d-none">
+                                    <div class="mb-3">
+                                        <label for="initialPayment" class="form-label">Monto Inicial</label>
+                                        <input type="number" class="form-control" id="initialPayment" min="0" step="0.01">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="numWeeks" class="form-label">Número de Semanas</label>
+                                        <input type="number" class="form-control" id="numWeeks" min="1" step="1">
+                                    </div>
+                                </div>
+                                <button class="btn btn-turquoise w-100" id="confirm-purchase-btn"><i class="fas fa-money-bill-wave me-2"></i>Confirmar Compra</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="text-turquoise mt-4">Historial de Compras Recientes</h5>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover text-white">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Método</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-purchases-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                `;
+
+                document.getElementById('productSearch').addEventListener('input', renderAvailableProducts);
+                document.getElementById('paymentMethod').addEventListener('change', (e) => {
+                    if (e.target.value === 'abonos') {
+                        document.getElementById('abonos-options').classList.remove('d-none');
+                    } else {
+                        document.getElementById('abonos-options').classList.add('d-none');
+                    }
+                });
+                document.getElementById('confirm-purchase-btn').addEventListener('click', confirmPurchase);
+                renderAvailableProducts();
+                renderShoppingCart();
+                renderRecentPurchases();
+            }
+
+            function renderAvailableProducts() {
+                const searchInput = document.getElementById('productSearch').value.toLowerCase();
+                const availableProductsList = document.getElementById('available-products-list');
+                availableProductsList.innerHTML = '';
+
+                // Asegúrate de que products sea un array
+                const filteredProducts = Array.isArray(products) ? products.filter(p =>
+                    p.name.toLowerCase().includes(searchInput) ||
+                    p.category.toLowerCase().includes(searchInput)
+                ) : [];
+
+                if (filteredProducts.length === 0) {
+                    availableProductsList.innerHTML = '<p class="text-center text-muted m-3">No se encontraron productos o no hay productos registrados.</p>';
+                    return;
+                }
+
+                filteredProducts.forEach(product => {
+                    const quantityInCart = shoppingCart.find(item => item.product.id === product.id)?.quantity || 0;
+                    const availableStock = product.inventory - quantityInCart;
+
+                    const item = document.createElement('a');
+                    item.href = "#";
+                    item.className = `list-group-item list-group-item-action bg-dark text-white d-flex justify-content-between align-items-center ${availableStock <= 0 ? 'text-muted' : ''}`;
+                    item.innerHTML = `
+                        <div>
+                            <strong>${product.name}</strong> ($${product.price.toFixed(2)}) - ${product.category}<br>
+                            <small>Stock: ${availableStock}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-turquoise add-to-cart-btn" data-id="${product.id}" ${availableStock <= 0 ? 'disabled' : ''}>
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    `;
+                    item.querySelector('.add-to-cart-btn').addEventListener('click', (e) => {
+                        e.stopPropagation(); // Evita que el click en el botón active el item
+                        addToCart(product.id);
+                    });
+                    availableProductsList.appendChild(item);
+                });
+            }
+
+            function addToCart(productId) {
+                const product = products.find(p => p.id === productId);
+                if (!product) return;
+
+                const cartItem = shoppingCart.find(item => item.product.id === productId);
+
+                if (cartItem) {
+                    if (cartItem.quantity < product.inventory) {
+                        cartItem.quantity++;
+                    } else {
+                        showAlert('warning', 'Sin Stock', `No hay más stock disponible de ${product.name}.`);
+                        return;
+                    }
+                } else {
+                    if (product.inventory > 0) {
+                        shoppingCart.push({ product: product, quantity: 1 });
+                    } else {
+                        showAlert('warning', 'Sin Stock', `${product.name} no tiene stock disponible.`);
+                        return;
+                    }
+                }
+                renderShoppingCart();
+                renderAvailableProducts(); // Para actualizar el stock mostrado
+                playSound('addToCart');
+            }
+
+            function removeFromCart(productId) {
+                const cartItemIndex = shoppingCart.findIndex(item => item.product.id === productId);
+                if (cartItemIndex !== -1) {
+                    if (shoppingCart[cartItemIndex].quantity > 1) {
+                        shoppingCart[cartItemIndex].quantity--;
+                    } else {
+                        shoppingCart.splice(cartItemIndex, 1);
+                    }
+                }
+                renderShoppingCart();
+                renderAvailableProducts(); // Para actualizar el stock mostrado
+                playSound('click');
+            }
+
+            function renderShoppingCart() {
+                const cartList = document.getElementById('shopping-cart-list');
+                cartList.innerHTML = '';
+                let total = 0;
+
+                if (shoppingCart.length === 0) {
+                    cartList.innerHTML = '<li class="list-group-item bg-dark text-muted">El carrito está vacío.</li>';
+                } else {
+                    shoppingCart.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item bg-dark text-white d-flex justify-content-between align-items-center border-bottom border-secondary';
+                        const itemTotal = item.product.price * item.quantity;
+                        li.innerHTML = `
+                            <div>
+                                ${item.product.name} (x${item.quantity}) - $${itemTotal.toFixed(2)}
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-info me-1 increase-qty" data-id="${item.product.id}"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-sm btn-outline-warning me-1 decrease-qty" data-id="${item.product.id}"><i class="fas fa-minus"></i></button>
+                                <button class="btn btn-sm btn-outline-danger remove-from-cart" data-id="${item.product.id}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        `;
+                        cartList.appendChild(li);
+                        total += itemTotal;
+                    });
+                }
+                document.getElementById('cart-total').textContent = total.toFixed(2);
+
+                document.querySelectorAll('.increase-qty').forEach(btn => btn.addEventListener('click', (e) => addToCart(e.currentTarget.dataset.id)));
+                document.querySelectorAll('.decrease-qty').forEach(btn => btn.addEventListener('click', (e) => removeFromCart(e.currentTarget.dataset.id)));
+                document.querySelectorAll('.remove-from-cart').forEach(btn => btn.addEventListener('click', (e) => {
+                    const productId = e.currentTarget.dataset.id;
+                    const itemToRemoveIndex = shoppingCart.findIndex(item => item.product.id === productId);
+                    if (itemToRemoveIndex !== -1) {
+                        shoppingCart.splice(itemToRemoveIndex, 1); // Eliminar el item completamente
+                        renderShoppingCart();
+                        renderAvailableProducts();
+                        playSound('click');
+                    }
+                }));
+            }
+
+            async function confirmPurchase() {
+                const clientId = document.getElementById('purchaseClientSelect').value;
+                const paymentMethod = document.getElementById('paymentMethod').value;
+                const cartTotal = parseFloat(document.getElementById('cart-total').textContent);
+
+                if (!clientId) {
+                    showAlert('warning', 'Cliente Requerido', 'Por favor, selecciona un cliente para la compra.');
+                    return;
+                }
+                if (shoppingCart.length === 0) {
+                    showAlert('warning', 'Carrito Vacío', 'Agrega productos al carrito antes de confirmar la compra.');
+                    return;
+                }
+
+                if (paymentMethod === 'abonos') {
+                    const initialPayment = parseFloat(document.getElementById('initialPayment').value);
+                    const numWeeks = parseInt(document.getElementById('numWeeks').value);
+
+                    if (isNaN(initialPayment) || initialPayment < 0 || initialPayment > cartTotal) {
+                        showAlert('warning', 'Monto Inicial Inválido', 'El monto inicial debe ser un número válido y no puede ser mayor al total.');
+                        return;
+                    }
+                    if (isNaN(numWeeks) || numWeeks <= 0) {
+                        showAlert('warning', 'Semanas Inválidas', 'El número de semanas debe ser un número entero mayor que cero.');
+                        return;
+                    }
+
+                    // Lógica para abonos (simulación)
+                    const remainingDebt = cartTotal - initialPayment;
+                    const weeklyPayment = remainingDebt / numWeeks;
+                    const paymentSchedule = [];
+                    let currentDate = new Date();
+                    for (let i = 0; i < numWeeks; i++) {
+                        currentDate.setDate(currentDate.getDate() + 7); // Suma 7 días para la próxima semana
+                        paymentSchedule.push({ date: currentDate.toISOString().split('T')[0], amount: weeklyPayment, paid: false });
+                    }
+
+                    const newPurchase = {
+                        id: generateId(),
+                        clientId: clientId,
+                        products: shoppingCart.map(item => ({ id: item.product.id, name: item.product.name, quantity: item.quantity, price: item.product.price })),
+                        total: cartTotal,
+                        date: new Date().toISOString(),
+                        paymentMethod: paymentMethod,
+                        initialPayment: initialPayment,
+                        remainingDebt: remainingDebt,
+                        paymentSchedule: paymentSchedule,
+                        status: initialPayment === cartTotal ? 'liquidada' : 'pendiente' // Si el pago inicial es el total, se liquida
+                    };
+                    purchases.push(newPurchase);
+
+                    // Actualizar inventario
+                    shoppingCart.forEach(cartItem => {
+                        const productIndex = products.findIndex(p => p.id === cartItem.product.id);
+                        if (productIndex !== -1) {
+                            products[productIndex].inventory -= cartItem.quantity;
+                        }
+                    });
+
+                    saveData();
+                    showAlert('success', 'Compra Registrada con Abonos', `Se ha registrado una compra por $${cartTotal.toFixed(2)} con abonos. Primer pago de $${initialPayment.toFixed(2)}.`);
+                    // Generar recibo PDF (aquí se invocaría la lógica PDF)
+                    console.log("Generando recibo PDF para compra a abonos...");
+                    resetPurchaseForm();
+                    playSound('confirm');
+
+                } else { // Pago al contado
+                    const newPurchase = {
+                        id: generateId(),
+                        clientId: clientId,
+                        products: shoppingCart.map(item => ({ id: item.product.id, name: item.product.name, quantity: item.quantity, price: item.product.price })),
+                        total: cartTotal,
+                        date: new Date().toISOString(),
+                        paymentMethod: paymentMethod
+                    };
+                    purchases.push(newPurchase);
+
+                    // Actualizar inventario
+                    shoppingCart.forEach(cartItem => {
+                        const productIndex = products.findIndex(p => p.id === cartItem.product.id);
+                        if (productIndex !== -1) {
+                            products[productIndex].inventory -= cartItem.quantity;
+                        }
+                    });
+
+                    saveData();
+                    showAlert('success', 'Compra Registrada', `Compra por $${cartTotal.toFixed(2)} realizada al contado.`);
+                    // Generar recibo PDF (aquí se invocaría la lógica PDF)
+                    console.log("Generando recibo PDF para compra al contado...");
+                    resetPurchaseForm();
+                    playSound('confirm');
+                }
+            }
+
+            function resetPurchaseForm() {
+                document.getElementById('purchaseClientSelect').value = '';
+                document.getElementById('paymentMethod').value = 'contado';
+                document.getElementById('abonos-options').classList.add('d-none');
+                document.getElementById('initialPayment').value = '';
+                document.getElementById('numWeeks').value = '';
+                shoppingCart = []; // Vaciar el carrito
+                renderShoppingCart();
+                renderAvailableProducts(); // Para actualizar los stocks visibles
+                renderRecentPurchases();
+            }
+
+            function renderRecentPurchases() {
+                const recentPurchasesTableBody = document.getElementById('recent-purchases-table-body');
+                recentPurchasesTableBody.innerHTML = '';
+
+                // Asegúrate de que purchases sea un array
+                const sortedPurchases = Array.isArray(purchases) ? [...purchases].sort((a, b) => new Date(b.date) - new Date(a.date)) : []; // Últimas primero
+
+                if (sortedPurchases.length === 0) {
+                    recentPurchasesTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay compras registradas.</td></tr>';
+                    return;
+                }
+
+                sortedPurchases.slice(0, 5).forEach(purchase => { // Mostrar solo las 5 más recientes
+                    const clientName = clients.find(c => c.id === purchase.clientId)?.name || 'Cliente Desconocido';
+                    const row = recentPurchasesTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${new Date(purchase.date).toLocaleDateString()}</td>
+                        <td>${clientName}</td>
+                        <td>$${purchase.total.toFixed(2)}</td>
+                        <td>${purchase.paymentMethod === 'contado' ? 'Contado' : `Abonos (${purchase.status || 'Pendiente'})`}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info view-purchase-detail-btn" data-id="${purchase.id}" title="Ver Detalle"><i class="fas fa-eye"></i></button>
+                            </td>
+                    `;
+                });
+                // Event listeners para ver detalles de compra
+                document.querySelectorAll('.view-purchase-detail-btn').forEach(btn => btn.addEventListener('click', (e) => viewPurchaseDetail(e.currentTarget.dataset.id)));
+            }
+
+            function viewPurchaseDetail(purchaseId) {
+                const purchase = purchases.find(p => p.id === purchaseId);
+                if (!purchase) {
+                    showAlert('error', 'Error', 'Compra no encontrada.');
+                    return;
+                }
+
+                const clientName = clients.find(c => c.id === purchase.clientId)?.name || 'Cliente Desconocido';
+                let productsDetail = Array.isArray(purchase.products) ? purchase.products.map(p => `<li>${p.name} (x${p.quantity}) - $${p.price.toFixed(2)} c/u</li>`).join('') : '<li>No hay detalles de productos.</li>';
+
+                let paymentDetail = `Método de Pago: <strong>${purchase.paymentMethod === 'contado' ? 'Contado' : 'Abonos'}</strong><br>`;
+                if (purchase.paymentMethod === 'abonos') {
+                    paymentDetail += `Pago Inicial: $${purchase.initialPayment.toFixed(2)}<br>`;
+                    paymentDetail += `Deuda Restante: $${purchase.remainingDebt !== undefined ? purchase.remainingDebt.toFixed(2) : 'N/A'}<br>`;
+                    paymentDetail += `Estado: ${purchase.status || 'Pendiente'}<br>`;
+                    paymentDetail += `<h6>Calendario de Pagos:</h6><ul>`;
+                    if (Array.isArray(purchase.paymentSchedule)) {
+                        purchase.paymentSchedule.forEach(sch => {
+                            paymentDetail += `<li>${sch.date}: $${sch.amount.toFixed(2)} (${sch.paid ? 'Pagado' : 'Pendiente'})</li>`;
+                        });
+                    } else {
+                        paymentDetail += `<li>No hay calendario de pagos disponible.</li>`;
+                    }
+                    paymentDetail += `</ul>`;
+                }
+
+                showAlert('info', 'Detalle de Compra', `
+                    <strong>ID Compra:</strong> ${purchase.id}<br>
+                    <strong>Cliente:</strong> ${clientName}<br>
+                    <strong>Fecha:</strong> ${new Date(purchase.date).toLocaleDateString()} ${new Date(purchase.date).toLocaleTimeString()}<br>
+                    <strong>Total:</strong> $${purchase.total.toFixed(2)}<br>
+                    ${paymentDetail}
+                    <h6>Productos:</h6>
+                    <ul>${productsDetail}</ul>
+                `, true); // True para HTML content
+                playSound('click');
+            }
+
+
+            function loadPaymentsSection() {
+                mainContent.innerHTML = `
+                    <h3>Gestión de Abonos</h3>
+                    <p>Registra abonos y gestiona los planes de pago de tus clientes.</p>
+
+                    <div class="mb-3">
+                        <label for="selectClientForPayments" class="form-label">Seleccionar Cliente</label>
+                        <select class="form-select bg-dark text-white border-turquoise" id="selectClientForPayments">
+                            <option value="">Selecciona un cliente</option>
+                            ${Array.isArray(clients) ? clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('') : ''}
+                        </select>
+                    </div>
+
+                    <div id="client-abonos-info" class="card bg-dark text-white p-3 mb-4 d-none">
+                        <h5 class="card-title text-turquoise" id="current-client-name"></h5>
+                        <p>Deuda Total Pendiente: <strong class="text-danger" id="total-debt-client">0.00</strong></p>
+                        <h6 class="text-turquoise">Compras a Abonos del Cliente</h6>
+                        <div id="abono-purchases-list">
+                            </div>
+                    </div>
+                `;
+
+                document.getElementById('selectClientForPayments').addEventListener('change', (e) => {
+                    const clientId = e.target.value;
+                    if (clientId) {
+                        renderClientAbonos(clientId);
+                        document.getElementById('client-abonos-info').classList.remove('d-none');
+                    } else {
+                        document.getElementById('client-abonos-info').classList.add('d-none');
+                    }
+                });
+            }
+
+            function renderClientAbonos(clientId) {
+                const client = clients.find(c => c.id === clientId);
+                if (!client) return;
+
+                document.getElementById('current-client-name').textContent = `Cliente: ${client.name}`;
+                const abonoPurchasesList = document.getElementById('abono-purchases-list');
+                abonoPurchasesList.innerHTML = '';
+                let totalClientDebt = 0;
+
+                const clientAbonoPurchases = Array.isArray(purchases) ? purchases.filter(p => p.clientId === clientId && p.paymentMethod === 'abonos') : [];
+
+                if (clientAbonoPurchases.length === 0) {
+                    abonoPurchasesList.innerHTML = '<p class="text-muted">Este cliente no tiene compras a abonos pendientes.</p>';
+                } else {
+                    clientAbonoPurchases.forEach(purchase => {
+                        const debtRemaining = purchase.remainingDebt || 0;
+                        totalClientDebt += debtRemaining;
+
+                        const purchaseCard = document.createElement('div');
+                        purchaseCard.className = 'card bg-secondary text-white p-3 mb-2';
+                        purchaseCard.innerHTML = `
+                            <h6>Compra ID: ${purchase.id.substring(0, 8)}... - Total: $${purchase.total.toFixed(2)}</h6>
+                            <p>Deuda Pendiente: <strong class="text-warning">$${debtRemaining.toFixed(2)}</strong></p>
+                            <p>Estado: ${purchase.status || 'Pendiente'}</p>
+                            <h6 class="text-turquoise mt-2">Calendario de Pagos:</h6>
+                            <ul class="list-group list-group-flush bg-dark text-white mb-2">
+                                ${Array.isArray(purchase.paymentSchedule) ? purchase.paymentSchedule.map((sch, index) => `
+                                    <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
+                                        <span>${sch.date}: $${sch.amount.toFixed(2)}</span>
+                                        ${sch.paid ? '<span class="badge bg-success">Pagado</span>' : `
+                                            <button class="btn btn-sm btn-turquoise record-abono-btn"
+                                                    data-purchase-id="${purchase.id}"
+                                                    data-payment-index="${index}"
+                                                    data-amount="${sch.amount.toFixed(2)}"
+                                                    ${purchase.status === 'liquidada' || sch.paid ? 'disabled' : ''}>
+                                                    Registrar Abono
+                                            </button>
+                                        `}
+                                    </li>
+                                `).join('') : '<li class="list-group-item bg-dark text-muted">No hay calendario de pagos.</li>'}
+                            </ul>
+                            <button class="btn btn-danger w-100 mt-2 liquidate-debt-btn" data-purchase-id="${purchase.id}" ${debtRemaining <= 0 ? 'disabled' : ''}><i class="fas fa-handshake me-2"></i>Liquidar Deuda</button>
+                        `;
+                        abonoPurchasesList.appendChild(purchaseCard);
+                    });
+                }
+                document.getElementById('total-debt-client').textContent = totalClientDebt.toFixed(2);
+
+                document.querySelectorAll('.record-abono-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+                    const purchaseId = e.currentTarget.dataset.purchaseId;
+                    const paymentIndex = parseInt(e.currentTarget.dataset.payment-index);
+                    const amount = parseFloat(e.currentTarget.dataset.amount);
+
+                    const result = await showAlert('question', 'Registrar Abono', `¿Confirmar pago de $${amount.toFixed(2)} para esta cuota?`, true, 'Sí, registrar', 'Cancelar');
+                    if (result.isConfirmed) {
+                        recordAbono(purchaseId, paymentIndex);
+                        playSound('confirm');
+                    }
+                }));
+
+                document.querySelectorAll('.liquidate-debt-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+                    const purchaseId = e.currentTarget.dataset.purchaseId;
+                    const purchase = purchases.find(p => p.id === purchaseId);
+                    if (!purchase) return;
+
+                    const result = await showAlert('question', 'Liquidar Deuda', `¿Estás seguro de liquidar la deuda restante de $${purchase.remainingDebt.toFixed(2)} para esta compra?`, true, 'Sí, liquidar', 'Cancelar');
+                    if (result.isConfirmed) {
+                        liquidateDebt(purchaseId);
+                        playSound('confirm');
+                    }
+                }));
+            }
+
+            function recordAbono(purchaseId, paymentIndex) {
+                const purchase = purchases.find(p => p.id === purchaseId);
+                if (purchase && Array.isArray(purchase.paymentSchedule) && purchase.paymentSchedule[paymentIndex]) {
+                    if (!purchase.paymentSchedule[paymentIndex].paid) {
+                        purchase.paymentSchedule[paymentIndex].paid = true;
+                        purchase.remainingDebt -= purchase.paymentSchedule[paymentIndex].amount;
+                        if (purchase.remainingDebt <= 0.01) { // Pequeña tolerancia para flotantes
+                            purchase.remainingDebt = 0;
+                            purchase.status = 'liquidada';
+                            showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada!');
+                        } else {
+                            showAlert('success', 'Abono Registrado', `Abono de $${purchase.paymentSchedule[paymentIndex].amount.toFixed(2)} registrado.`);
+                        }
+                        saveData();
+                        renderClientAbonos(purchase.clientId); // Recargar la vista de abonos
+                        // Generar recibo PDF (aquí se invocaría la lógica PDF)
+                        console.log("Generando recibo PDF por abono...");
+                    } else {
+                        showAlert('info', 'Ya Pagado', 'Este abono ya ha sido registrado.');
+                    }
+                }
+            }
+
+            function liquidateDebt(purchaseId) {
+                const purchase = purchases.find(p => p.id === purchaseId);
+                if (purchase) {
+                    if (Array.isArray(purchase.paymentSchedule)) {
+                        purchase.paymentSchedule.forEach(sch => sch.paid = true); // Marcar todos como pagados
+                    }
+                    purchase.remainingDebt = 0;
+                    purchase.status = 'liquidada';
+                    saveData();
+                    showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada en su totalidad!');
+                    renderClientAbonos(purchase.clientId);
+                    // Generar recibo PDF (aquí se invocaría la lógica PDF)
+                    console.log("Generando recibo PDF por liquidación de deuda...");
+                }
+            }
+
+
+            function loadInventorySection() {
+                mainContent.innerHTML = `
+                    <h3>Control de Inventario</h3>
+                    <p>Visualiza el stock actual de tus productos y su precio.</p>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover text-white">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Imagen</th>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col">Precio</th>
+                                    <th scope="col">Cantidad Disponible</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                `;
+                renderInventory();
+            }
+
+            function renderInventory() {
+                const inventoryTableBody = document.getElementById('inventory-table-body');
+                inventoryTableBody.innerHTML = '';
+
+                if (!Array.isArray(products) || products.length === 0) {
+                    inventoryTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay productos en inventario.</td></tr>';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const row = inventoryTableBody.insertRow();
+                    row.innerHTML = `
+                        <td><img src="${product.imageUrl || 'https://via.placeholder.com/40?text=No+Img'}" alt="Producto" class="img-thumbnail" style="width: 40px; height: 40px; object-fit: cover;"></td>
+                        <td>${product.name}</td>
+                        <td>$${product.price.toFixed(2)}</td>
+                        <td>${product.inventory}</td>
+                    `;
+                    if (product.inventory <= 5) { // Alerta visual para bajo stock
+                        row.classList.add('table-warning');
+                    }
+                    if (product.inventory === 0) { // Alerta visual para agotado
+                        row.classList.add('table-danger');
+                    }
+                });
+            }
+
+            function loadReportsSection() {
+                mainContent.innerHTML = `
+                    <h3>Reportes Generales</h3>
+                    <p>Obtén un resumen de tus ventas.</p>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise">Total Vendido</h5>
+                                    <p class="card-text fs-3" id="report-total-sold">0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise">Ventas al Contado</h5>
+                                    <p class="card-text fs-3" id="report-total-contado">0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise">Ventas a Abonos (Pagado)</h5>
+                                    <p class="card-text fs-3" id="report-total-abonos-paid">0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white border-turquoise">
+                                <div class="card-body">
+                                    <h5 class="card-title text-turquoise">Deuda Pendiente por Abonos</h5>
+                                    <p class="card-text fs-3 text-danger" id="report-total-abonos-pending">0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="text-turquoise mt-4">Filtro por Fechas (Opcional)</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">Fecha de Inicio</label>
+                            <input type="date" class="form-control bg-dark text-white border-turquoise" id="startDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-control bg-dark text-white border-turquoise" id="endDate">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-turquoise w-100" id="apply-date-filter-btn"><i class="fas fa-filter me-2"></i>Aplicar Filtro</button>
+                        </div>
+                    </div>
+                `;
+                calculateReports();
+                document.getElementById('apply-date-filter-btn').addEventListener('click', calculateReports);
+            }
+
+            function calculateReports() {
+                const startDate = document.getElementById('startDate')?.value ? new Date(document.getElementById('startDate').value + 'T00:00:00') : null;
+                const endDate = document.getElementById('endDate')?.value ? new Date(document.getElementById('endDate').value + 'T23:59:59') : null;
+
+                let totalSold = 0;
+                let totalContado = 0;
+                let totalAbonosPaid = 0;
+                let totalAbonosPending = 0;
+
+                // Asegúrate de que purchases sea un array
+                const filteredPurchases = Array.isArray(purchases) ? purchases.filter(purchase => {
+                    const purchaseDate = new Date(purchase.date);
+                    return (!startDate || purchaseDate >= startDate) && (!endDate || purchaseDate <= endDate);
+                }) : [];
+
+                filteredPurchases.forEach(purchase => {
+                    totalSold += purchase.total;
+
+                    if (purchase.paymentMethod === 'contado') {
+                        totalContado += purchase.total;
+                    } else if (purchase.paymentMethod === 'abonos') {
+                        totalAbonosPending += purchase.remainingDebt || 0;
+                        // Calcula el total pagado de abonos
+                        if (Array.isArray(purchase.paymentSchedule)) {
+                            purchase.paymentSchedule.forEach(sch => {
+                                if (sch.paid) {
+                                    totalAbonosPaid += sch.amount;
+                                }
+                            });
+                        }
+                    }
+                });
+
+                document.getElementById('report-total-sold').textContent = `$${totalSold.toFixed(2)}`;
+                document.getElementById('report-total-contado').textContent = `$${totalContado.toFixed(2)}`;
+                document.getElementById('report-total-abonos-paid').textContent = `$${totalAbonosPaid.toFixed(2)}`;
+                document.getElementById('report-total-abonos-pending').textContent = `$${totalAbonosPending.toFixed(2)}`;
+            }
+
+
+            function loadBackupSection() {
+                mainContent.innerHTML = `
+                    <h3>Copia de Seguridad y Restauración</h3>
+                    <p>Administra tus datos. Puedes respaldar toda la información de la aplicación o restaurarla desde un archivo JSON.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white p-3">
+                                <h5 class="card-title text-turquoise">Respaldar Datos</h5>
+                                <p>Descarga un archivo JSON con todos los datos (usuarios, clientes, productos, compras).</p>
+                                <button class="btn btn-turquoise" id="backup-data-btn"><i class="fas fa-download me-2"></i>Respaldar Datos</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-dark text-white p-3">
+                                <h5 class="card-title text-turquoise">Restaurar Datos</h5>
+                                <p>Sube un archivo JSON para restaurar tus datos. ¡Cuidado! Esto sobrescribirá los datos actuales.</p>
+                                <input type="file" class="form-control bg-dark text-white border-turquoise mb-2" id="restore-file-input" accept=".json">
+                                <button class="btn btn-outline-danger" id="restore-data-btn"><i class="fas fa-upload me-2"></i>Restaurar Datos</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('backup-data-btn').addEventListener('click', backupData);
+                document.getElementById('restore-data-btn').addEventListener('click', restoreData);
+            }
+
+            function backupData() {
+                const allData = {
+                    users: JSON.parse(localStorage.getItem('users')) || [],
+                    clients: clients,
+                    products: products,
+                    purchases: purchases
+                };
+                const dataStr = JSON.stringify(allData, null, 2); // Formato legible
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_sistema_ventas_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showAlert('success', 'Respaldo Creado', '¡Tus datos han sido descargados correctamente!');
+                playSound('confirm');
+            }
+
+            async function restoreData() {
+                const fileInput = document.getElementById('restore-file-input');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    showAlert('warning', 'Archivo No Seleccionado', 'Por favor, selecciona un archivo JSON para restaurar.');
+                    return;
+                }
+
+                const result = await showAlert('warning', 'Confirmar Restauración', '¡Advertencia! Esto sobrescribirá todos tus datos actuales. ¿Estás seguro de continuar?', true, 'Sí, restaurar', 'Cancelar');
+                if (result.isConfirmed) {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const restoredData = JSON.parse(e.target.result);
+                            // Validar que el archivo JSON tenga las estructuras esperadas
+                            if (restoredData && Array.isArray(restoredData.users) && Array.isArray(restoredData.clients) && Array.isArray(restoredData.products) && Array.isArray(restoredData.purchases)) {
+                                localStorage.setItem('users', JSON.stringify(restoredData.users));
+                                localStorage.setItem('clients', JSON.stringify(restoredData.clients));
+                                localStorage.setItem('products', JSON.stringify(restoredData.products));
+                                localStorage.setItem('purchases', JSON.stringify(restoredData.purchases));
+
+                                // Recargar las variables globales de la aplicación con los datos restaurados
+                                loadData(); // Esto actualizará currentUser, clients, products, purchases
+                                loadDashboard(); // Carga el dashboard para reflejar los nuevos datos
+
+                                await showAlert('success', 'Restauración Exitosa', '¡Datos restaurados correctamente! La aplicación se ha recargado con los nuevos datos.');
+                                playSound('confirm');
+                            } else {
+                                showAlert('error', 'Formato Inválido', 'El archivo JSON no tiene el formato de respaldo esperado. Asegúrate de que contenga "users", "clients", "products" y "purchases" como arrays.');
+                            }
+                        } catch (error) {
+                            showAlert('error', 'Error al Leer Archivo', 'No se pudo leer el archivo JSON o el formato es incorrecto: ' + error.message);
+                            console.error("Error al restaurar:", error);
+                        }
+                    };
+                    reader.onerror = () => {
+                        showAlert('error', 'Error de Lectura', 'Hubo un error al leer el archivo.');
+                    };
+                    reader.readAsText(file);
+                }
+            }
+
+
+            /**
+             * Carga el contenido de una sección específica en el área principal.
+             * @param {string} section - El nombre de la sección a cargar.
+             */
+            function loadSection(section) {
+                // Actualizar la clase 'active' en el menú lateral
+                sidebarLinks.forEach(link => {
+                    if (link.dataset.section === section) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+
+                // Llama a la función específica para cargar el contenido de la sección
+                switch (section) {
+                    case 'dashboard':
+                        loadDashboard();
+                        break;
+                    case 'clients':
+                        loadClientsSection();
+                        break;
+                    case 'products':
+                        loadProductsSection();
+                        break;
+                    case 'purchases':
+                        loadPurchasesSection();
+                        break;
+                    case 'payments':
+                        loadPaymentsSection();
+                        break;
+                    case 'inventory':
+                        loadInventorySection();
+                        break;
+                    case 'reports':
+                        loadReportsSection();
+                        break;
+                    case 'backup':
+                        loadBackupSection();
+                        break;
+                    default:
+                        mainContent.innerHTML = `<h3>Sección no encontrada</h3><p>Por favor, selecciona una opción válida del menú.</p>`;
+                }
+                playSound('click'); // Sonido al cambiar de sección
+            }
+
+            // --- Manejadores de Eventos Globales ---
+
+            // Toggle del menú lateral
+            menuToggle.addEventListener('click', () => {
+                wrapper.classList.toggle('toggled');
+                playSound('click');
+            });
+
+            // Navegación del menú lateral
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault(); // Evita el comportamiento predeterminado del enlace
+                    const section = e.currentTarget.dataset.section; // Obtiene la sección del atributo data-section
+                    if (currentUser) { // Solo si el usuario está logueado
+                        loadSection(section);
+                        // En pantallas pequeñas, cierra el sidebar después de seleccionar una opción
+                        if (window.innerWidth < 768) {
+                            wrapper.classList.add('toggled'); // Vuelve a ocultar el sidebar en móviles
+                        }
+                    } else {
+                        showAlert('warning', 'Acceso Denegado', 'Por favor, inicia sesión para acceder a las secciones.');
+                    }
+                });
+            });
+
+            // Lógica de Registro
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('registerName').value.trim();
+                const email = document.getElementById('registerEmail').value.trim();
+                const password = document.getElementById('registerPassword').value.trim();
+
+                // Validación básica
+                if (!name || !email || !password) {
+                    showAlert('error', 'Error de Registro', 'Todos los campos son obligatorios.');
+                    return;
+                }
+                if (!/\S+@\S+\.\S+/.test(email)) {
+                    showAlert('error', 'Correo Inválido', 'Por favor, ingresa un formato de correo electrónico válido.');
+                    return;
+                }
+                if (password.length < 6) {
+                    showAlert('warning', 'Contraseña Débil', 'La contraseña debe tener al menos 6 caracteres.');
+                    return;
+                }
+
+                // Simulación de guardado de usuario en Local Storage
+                let users = JSON.parse(localStorage.getItem('users') || '[]');
+                const userExists = users.some(u => u.email === email);
+
+                if (userExists) {
+                    showAlert('error', 'Error de Registro', 'Este correo ya está registrado.');
+                    playSound('alert');
+                } else {
+                    const newUser = { id: generateId(), name, email, password }; // ID simple
+                    users.push(newUser);
+                    localStorage.setItem('users', JSON.stringify(users));
+                    await showAlert('success', 'Registro Exitoso', '¡Usuario registrado correctamente! Ya puedes iniciar sesión.');
+                    registerForm.reset(); // Limpia el formulario
+                    registerModal.hide(); // Cierra el modal de registro
+                    loginModal.show(); // Abre el modal de login
+                    playSound('confirm');
+                }
+            });
+
+            // Lógica de Login
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value.trim();
+                const password = document.getElementById('loginPassword').value.trim();
+
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                const user = users.find(u => u.email === email && u.password === password);
+
+                if (user) {
+                    currentUser = user; // Establece el usuario actual
+                    saveData(); // Guarda la sesión en Local Storage
+                    await showAlert('success', '¡Bienvenido!', `Has iniciado sesión como ${currentUser.name}.`);
+                    loginModal.hide(); // Oculta el modal de login
+                    loadSection('dashboard'); // Carga el dashboard
+                    playSound('confirm');
+                } else {
+                    showAlert('error', 'Error de Login', 'Correo o contraseña incorrectos.');
+                    playSound('alert');
+                }
+            });
+
+            // Lógica para mostrar/ocultar modales de Login/Registro
+            showRegisterModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginModal.hide();
+                registerModal.show();
+                playSound('click');
+            });
+
+            showLoginModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerModal.hide();
+                loginModal.show();
+                playSound('click');
+            });
+
+
+            // Lógica de Cerrar Sesión
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const result = await showAlert('warning', '¿Estás seguro?', '¿Quieres cerrar tu sesión actual?', true, 'Sí, cerrar sesión', 'Cancelar');
+                if (result.isConfirmed) {
+                    currentUser = null; // Elimina el usuario actual
+                    saveData(); // Limpia la sesión en Local Storage
+                    await showAlert('info', 'Sesión Cerrada', 'Has cerrado tu sesión.');
+                    playSound('alert');
+                }
+            });
+
+            // --- Inicialización de la Aplicación ---
+            loadData(); // Intenta cargar la sesión y datos al iniciar
+            if (currentUser) {
+                loadSection('dashboard'); // Si hay sesión, carga el dashboard
+            } else {
+                // Si no hay sesión, el modal de login se mostrará gracias a updateUIForAuth()
+                // No es necesario cargar una sección, el usuario debe loguearse primero.
+            }
+        });
+    </script>
+</body>
+</html>
