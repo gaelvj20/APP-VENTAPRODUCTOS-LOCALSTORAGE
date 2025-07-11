@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.12.0/dist/sweetalert2.min.css">
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         /* --- CSS Personalizado --- */
@@ -218,6 +220,20 @@
     </style>
 </head>
 <body>
+    
+<div id="receipt-template" style="display: none; padding: 20px; font-family: sans-serif; font-size: 12px; line-height: 1.5;">
+    <h3>Recibo de Pago</h3>
+    <p><strong>Fecha:</strong> <span id="receipt-date"></span></p>
+    <p><strong>ID de Compra:</strong> <span id="receipt-purchase-id"></span></p>
+    <p><strong>Cliente:</strong> <span id="receipt-client-name"></span></p>
+    <hr>
+    <div id="receipt-details">
+        </div>
+    <hr>
+    <p><strong>Deuda Restante:</strong> $<span id="receipt-remaining-debt"></span></p>
+    <p>¡Gracias por su pago!</p>
+</div>
+
     <div class="d-flex" id="wrapper">
         <div class="bg-dark border-right" id="sidebar-wrapper">
             <div class="sidebar-heading text-white-50 p-3">Sistema de Ventas</div>
@@ -1430,7 +1446,74 @@
                 });
             }
 
-            function renderClientAbonos(clientId) {
+            // Ensure 'purchases' and 'clients' (if you have client names) are accessible
+// For demonstration, let's assume 'clients' is an array similar to 'purchases'
+// const clients = [...]; // Your client data
+
+async function generateReceiptPdf(purchase, paymentAmount, isLiquidation = false) {
+    const receiptTemplate = document.getElementById('receipt-template');
+    const receiptDate = document.getElementById('receipt-date');
+    const receiptPurchaseId = document.getElementById('receipt-purchase-id');
+    const receiptClientName = document.getElementById('receipt-client-name');
+    const receiptDetails = document.getElementById('receipt-details');
+    const receiptRemainingDebt = document.getElementById('receipt-remaining-debt');
+
+    // Populate receipt details
+    receiptDate.textContent = new Date().toLocaleDateString('es-ES');
+    receiptPurchaseId.textContent = purchase.id;
+    // Assuming you have a way to get client name from purchase.clientId
+    const client = clients.find(c => c.id === purchase.clientId);
+    receiptClientName.textContent = client ? client.name : 'Desconocido';
+
+    let detailsHtml = '';
+    if (isLiquidation) {
+        detailsHtml = `
+            <p><strong>Tipo de Transacción:</strong> Liquidación Total de Deuda</p>
+            <p><strong>Monto Total Liquidado:</strong> $${purchase.totalAmount.toFixed(2)}</p>
+        `;
+    } else {
+        detailsHtml = `
+            <p><strong>Tipo de Transacción:</strong> Abono</p>
+            <p><strong>Monto del Abono:</strong> $${paymentAmount.toFixed(2)}</p>
+        `;
+    }
+    receiptDetails.innerHTML = detailsHtml;
+    receiptRemainingDebt.textContent = purchase.remainingDebt.toFixed(2);
+
+    // Make the template visible briefly for html2canvas to render it correctly
+    receiptTemplate.style.display = 'block';
+
+    try {
+        const canvas = await html2canvas(receiptTemplate, { scale: 2 }); // Scale for better quality
+        const imgData = canvas.toDataURL('image/png');
+
+        // Restore display property
+        receiptTemplate.style.display = 'none';
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'px',
+            format: 'a5' // A5 is a good size for receipts
+        });
+
+        const imgWidth = 400; // Adjust based on your A5 size and padding
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+
+        pdf.addImage(imgData, 'PNG', 40, 40, imgWidth, imgHeight); // x, y, width, height
+        pdf.save(`recibo-${purchase.id}-${Date.now()}.pdf`);
+
+        showAlert('success', 'Recibo Generado', 'El recibo PDF ha sido generado y descargado.');
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        showAlert('error', 'Error al Generar Recibo', 'Hubo un problema al generar el recibo PDF.');
+    } finally {
+        // Ensure the template is hidden even if an error occurs
+        receiptTemplate.style.display = 'none';
+    }
+}
+
+           function renderClientAbonos(clientId) {
                 const client = clients.find(c => c.id === clientId);
                 if (!client) return;
 
@@ -1439,7 +1522,7 @@
                 abonoPurchasesList.innerHTML = '';
                 let totalClientDebt = 0;
 
-                const clientAbonoPurchases = Array.isArray(purchases) ? purchases.filter(p => p.clientId === clientId && p.paymentMethod === 'abonos') : [];
+                const clientAbonoPurchases = purchases.filter(p => p.clientId === clientId && p.paymentMethod === 'abonos');
 
                 if (clientAbonoPurchases.length === 0) {
                     abonoPurchasesList.innerHTML = '<p class="text-muted">Este cliente no tiene compras a abonos pendientes.</p>';
@@ -1456,7 +1539,7 @@
                             <p>Estado: ${purchase.status || 'Pendiente'}</p>
                             <h6 class="text-turquoise mt-2">Calendario de Pagos:</h6>
                             <ul class="list-group list-group-flush bg-dark text-white mb-2">
-                                ${Array.isArray(purchase.paymentSchedule) ? purchase.paymentSchedule.map((sch, index) => `
+                                ${purchase.paymentSchedule.map((sch, index) => `
                                     <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
                                         <span>${sch.date}: $${sch.amount.toFixed(2)}</span>
                                         ${sch.paid ? '<span class="badge bg-success">Pagado</span>' : `
@@ -1469,7 +1552,7 @@
                                             </button>
                                         `}
                                     </li>
-                                `).join('') : '<li class="list-group-item bg-dark text-muted">No hay calendario de pagos.</li>'}
+                                `).join('')}
                             </ul>
                             <button class="btn btn-danger w-100 mt-2 liquidate-debt-btn" data-purchase-id="${purchase.id}" ${debtRemaining <= 0 ? 'disabled' : ''}><i class="fas fa-handshake me-2"></i>Liquidar Deuda</button>
                         `;
@@ -1480,7 +1563,7 @@
 
                 document.querySelectorAll('.record-abono-btn').forEach(btn => btn.addEventListener('click', async (e) => {
                     const purchaseId = e.currentTarget.dataset.purchaseId;
-                    const paymentIndex = parseInt(e.currentTarget.dataset.payment-index);
+                    const paymentIndex = parseInt(e.currentTarget.dataset.paymentIndex);
                     const amount = parseFloat(e.currentTarget.dataset.amount);
 
                     const result = await showAlert('question', 'Registrar Abono', `¿Confirmar pago de $${amount.toFixed(2)} para esta cuota?`, true, 'Sí, registrar', 'Cancelar');
@@ -1503,44 +1586,45 @@
                 }));
             }
 
-            function recordAbono(purchaseId, paymentIndex) {
-                const purchase = purchases.find(p => p.id === purchaseId);
-                if (purchase && Array.isArray(purchase.paymentSchedule) && purchase.paymentSchedule[paymentIndex]) {
-                    if (!purchase.paymentSchedule[paymentIndex].paid) {
-                        purchase.paymentSchedule[paymentIndex].paid = true;
-                        purchase.remainingDebt -= purchase.paymentSchedule[paymentIndex].amount;
-                        if (purchase.remainingDebt <= 0.01) { // Pequeña tolerancia para flotantes
-                            purchase.remainingDebt = 0;
-                            purchase.status = 'liquidada';
-                            showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada!');
-                        } else {
-                            showAlert('success', 'Abono Registrado', `Abono de $${purchase.paymentSchedule[paymentIndex].amount.toFixed(2)} registrado.`);
-                        }
-                        saveData();
-                        renderClientAbonos(purchase.clientId); // Recargar la vista de abonos
-                        // Generar recibo PDF (aquí se invocaría la lógica PDF)
-                        console.log("Generando recibo PDF por abono...");
-                    } else {
-                        showAlert('info', 'Ya Pagado', 'Este abono ya ha sido registrado.');
-                    }
-                }
+           function recordAbono(purchaseId, paymentIndex) {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (purchase && purchase.paymentSchedule && purchase.paymentSchedule[paymentIndex]) {
+        if (!purchase.paymentSchedule[paymentIndex].paid) {
+            const paymentAmount = purchase.paymentSchedule[paymentIndex].amount; // Store before modifying remainingDebt
+            purchase.paymentSchedule[paymentIndex].paid = true;
+            purchase.remainingDebt -= paymentAmount;
+            if (purchase.remainingDebt <= 0.01) {
+                purchase.remainingDebt = 0;
+                purchase.status = 'liquidada';
+                showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada!');
+                generateReceiptPdf(purchase, paymentAmount, true); // Generate liquidation receipt
+            } else {
+                showAlert('success', 'Abono Registrado', `Abono de $${paymentAmount.toFixed(2)} registrado.`);
+                generateReceiptPdf(purchase, paymentAmount, false); // Generate abono receipt
             }
+            saveData();
+            renderClientAbonos(purchase.clientId);
+        } else {
+            showAlert('info', 'Ya Pagado', 'Este abono ya ha sido registrado.');
+        }
+    }
+}
 
-            function liquidateDebt(purchaseId) {
-                const purchase = purchases.find(p => p.id === purchaseId);
-                if (purchase) {
-                    if (Array.isArray(purchase.paymentSchedule)) {
-                        purchase.paymentSchedule.forEach(sch => sch.paid = true); // Marcar todos como pagados
-                    }
-                    purchase.remainingDebt = 0;
-                    purchase.status = 'liquidada';
-                    saveData();
-                    showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada en su totalidad!');
-                    renderClientAbonos(purchase.clientId);
-                    // Generar recibo PDF (aquí se invocaría la lógica PDF)
-                    console.log("Generando recibo PDF por liquidación de deuda...");
-                }
-            }
+function liquidateDebt(purchaseId) {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (purchase) {
+        if (Array.isArray(purchase.paymentSchedule)) {
+            purchase.paymentSchedule.forEach(sch => sch.paid = true);
+        }
+        purchase.remainingDebt = 0;
+        purchase.status = 'liquidada';
+        saveData();
+        showAlert('success', 'Deuda Liquidada', '¡La deuda de esta compra ha sido liquidada en su totalidad!');
+        renderClientAbonos(purchase.clientId);
+        generateReceiptPdf(purchase, purchase.totalAmount, true); // Generate liquidation receipt
+    }
+}
+            
 
 
             function loadInventorySection() {
